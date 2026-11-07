@@ -7,6 +7,9 @@
     // Login/register attempts per IP: 10 per minute.
     { "name": "AUTH_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
   ],
+  "ai": { "binding": "AI" },
+  // Cache of generated English speech (key: text), so each sentence is synthesized once.
+  "kv_namespaces": [{ "binding": "TTS_CACHE", "id": "a82372f936be4c12926923e8fe44e705" }],
   "d1_databases": [
     { "binding": "DB", "database_name": "number-game", "database_id": "daa0840b-c354-49b8-8485-3394dedcd2d2" }
   ]

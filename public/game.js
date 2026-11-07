@@ -15,6 +15,17 @@ export const SPEECH = {
   en: { lang: 'en-US', right: 'Great job!', wrong: 'Try again!' },
 };
 
+// Best device voice for a language: premium/enhanced/neural voices beat the basic default.
+export function pickVoice(voices, lang) {
+  const norm = (v) => v.lang.replace('_', '-');
+  const score = (v) => (/premium|高级/i.test(v.name) ? 8 : 0) + (/enhanced|增强|natural|neural/i.test(v.name) ? 4 : 0)
+    + (/google|online/i.test(v.name) ? 2 : 0) + (norm(v) === lang ? 1 : 0)
+    // Apple's novelty voices sound worse than the standard ones (e.g. Tingting, Samantha).
+    - (/^(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley)\b/i.test(v.name) ? 16 : 0);
+  return voices.filter((v) => norm(v).startsWith(lang.slice(0, 2)))
+    .reduce((best, v) => (!best || score(v) > score(best) ? v : best), null);
+}
+
 export function questionText({ a, b, op, item: { u, n, en } }, lang = 'zh') {
   if (lang === 'en') {
     const name = (k) => en[k === 1 ? 0 : 1];

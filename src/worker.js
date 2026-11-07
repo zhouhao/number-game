@@ -62,13 +62,32 @@ async function handleScores(request, env, user) {
   return json({ error: 'method not allowed' }, 405);
 }
 
+const TTS_MODEL = '@cf/deepgram/aura-2-en';
+const TTS_SPEAKER = 'luna';
+
+// English speech via Workers AI, cached in KV. Login required so strangers can't spend AI credits.
+async function handleTts(request, env) {
+  const text = new URL(request.url).searchParams.get('text') || '';
+  if (!/^[\x20-\x7E]{1,200}$/.test(text)) return json({ error: 'invalid text' }, 400);
+  const key = `${TTS_SPEAKER}:${text}`;
+  let audio = await env.TTS_CACHE.get(key, 'arrayBuffer');
+  if (!audio) {
+    const res = await env.AI.run(TTS_MODEL, { text, speaker: TTS_SPEAKER, encoding: 'mp3' }, { returnRawResponse: true });
+    if (!res.ok) return json({ error: 'tts failed' }, 502);
+    audio = await res.arrayBuffer();
+    await env.TTS_CACHE.put(key, audio);
+  }
+  return new Response(audio, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'private, max-age=31536000' } });
+}
+
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (['/api/register', '/api/login', '/api/logout', '/api/me'].includes(path)) return handleAuth(path, request, env);
-    if (path === '/api/scores') {
+    if (path === '/api/scores' || path === '/api/tts') {
       const user = await currentUser(env.DB, request);
-      return user ? handleScores(request, env, user) : json({ error: '未登录' }, 401);
+      if (!user) return json({ error: '未登录' }, 401);
+      return path === '/api/tts' ? handleTts(request, env) : handleScores(request, env, user);
     }
     return json({ error: 'not found' }, 404);
   },

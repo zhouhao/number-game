@@ -10,6 +10,8 @@
 - **实物出题**：加法是两堆物品并排，减法是被拿走的物品打 ✖
 - **答题方式**：选一选（4 个选项）或写一写（输入数字）
 - **读题语音**：自动朗读题目，可选中文或英文，🔊 按钮可重听
+  - 英文：服务器用 Workers AI 的 Deepgram Aura-2 生成自然语音，结果缓存在 KV；失败时退回设备语音
+  - 中文：设备自带语音，自动优先选高级/增强声音（iPad 可在 设置 → 辅助功能 → 朗读内容 → 声音 中下载）
 - **答错不给答案**：提示"再想想哦"，可以重答；只有第一次就答对才计分
 - **评分**：每局 5/10/15/20 题，结束给 0–100 分和 1–3 颗星
 - **账号**：邮箱密码注册登录，成绩按账号保存；一个账号下可用不同名字区分多个孩子
@@ -21,11 +23,11 @@
 | 路径 | 说明 |
 |---|---|
 | `public/index.html` | 页面与交互 |
-| `public/game.js` | 出题、选项、读题文本（纯逻辑）；加难度在 `LEVELS` 里加一行 |
-| `src/worker.js` | API：`/api/register` `/api/login` `/api/logout` `/api/me` `/api/scores` |
+| `public/game.js` | 出题、选项、读题文本、挑选设备语音（纯逻辑）；加难度在 `LEVELS` 里加一行 |
+| `src/worker.js` | API：`/api/register` `/api/login` `/api/logout` `/api/me` `/api/scores` `/api/tts`（英文语音，需登录） |
 | `src/auth.js` | PBKDF2 密码哈希、会话 Cookie |
 | `schema.sql` | D1 表结构：`users` `sessions` `scores` |
-| `wrangler.jsonc` | Worker 配置：静态资源、D1 绑定、登录限流（每 IP 每分钟 10 次） |
+| `wrangler.jsonc` | Worker 配置：静态资源、D1、Workers AI、KV（语音缓存）、登录限流（每 IP 每分钟 10 次） |
 
 ## 本地开发
 
@@ -49,4 +51,5 @@ npm run deploy
 
 - 没有找回/修改密码功能
 - "写一写"模式答不对会一直停在当前题
-- 读题声音取决于设备自带的语音引擎；iPad 需关闭静音
+- 中文读题音质取决于设备自带的语音；iPad 需关闭静音
+- 本地开发时 Workers AI 也走线上，生成英文语音会产生（极少的）费用

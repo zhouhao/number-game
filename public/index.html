@@ -79,18 +79,30 @@
 </main>
 
 <script type="module">
-import { LEVELS, SPEECH, makeQuestion, makeChoices, questionText } from './game.js';
+import { LEVELS, SPEECH, makeQuestion, makeChoices, questionText, pickVoice } from './game.js';
 
-function speak(text) {
+function browserSpeak(text) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const { lang } = SPEECH[game.voice];
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
-  // Some tablets (Android/iPad) ignore u.lang unless a matching voice is set explicitly.
-  u.voice = speechSynthesis.getVoices().find((v) => v.lang.replace('_', '-').startsWith(lang.slice(0, 2))) ?? null;
+  // Set the voice explicitly: tablets may ignore u.lang, and this picks premium/enhanced voices when installed.
+  u.voice = pickVoice(speechSynthesis.getVoices(), lang);
   u.rate = 0.85;
   speechSynthesis.speak(u);
+}
+
+// One reused element: iOS only lets an element play from timers after it first played inside a tap.
+const player = new Audio();
+
+// English uses natural server speech (Aura-2); Chinese, or any server failure, uses the device voice.
+function speak(text) {
+  if (game.voice !== 'en') return browserSpeak(text);
+  window.speechSynthesis?.cancel();
+  player.onerror = () => browserSpeak(text);
+  player.src = '/api/tts?text=' + encodeURIComponent(text);
+  player.play().catch((e) => { if (e.name !== 'AbortError') browserSpeak(text); });
 }
 window.speechSynthesis?.getVoices(); // Chrome loads the voice list lazily; warm it up before the first question.
 
