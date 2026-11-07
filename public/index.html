@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数数小乐园</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; background: #fff8e7; color: #333; margin: 0; text-align: center; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { color: #ff7a00; }
+  .hidden { display: none; }
+  label { display: block; font-size: 22px; margin: 14px 0; }
+  select, input { font-size: 22px; padding: 6px 10px; border-radius: 10px; border: 2px solid #ffb84d; }
+  button { font-size: 28px; padding: 12px 28px; margin: 8px; border: none; border-radius: 16px; background: #ffb84d; color: #fff; cursor: pointer; }
+  button:active { transform: scale(.95); }
+  .group { display: inline-flex; flex-wrap: wrap; justify-content: center; max-width: 260px; font-size: 44px; vertical-align: middle; padding: 8px; background: #fff; border-radius: 16px; }
+  .gone { opacity: .3; position: relative; }
+  .gone::after { content: '✖'; position: absolute; left: 0; right: 0; color: #e33; }
+  .sign { font-size: 56px; margin: 0 10px; vertical-align: middle; color: #ff7a00; }
+  #formula { font-size: 48px; margin: 16px 0; }
+  #choices button { min-width: 90px; font-size: 40px; background: #4db6ff; }
+  #choices button:disabled { background: #ccc; }
+  #answer { width: 120px; font-size: 40px; text-align: center; }
+  #feedback { font-size: 34px; min-height: 50px; }
+  .ok { color: #2a2; } .bad { color: #e33; }
+  #progress { font-size: 20px; color: #888; }
+  table { margin: 12px auto; border-collapse: collapse; font-size: 18px; }
+  td, th { padding: 4px 12px; border-bottom: 1px solid #eee; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🍎 数数小乐园 🚗</h1>
+
+  <section id="setup">
+    <label>名字 <input id="name" maxlength="20" value="宝贝"></label>
+    <label>难度 <select id="level"></select></label>
+    <label>题数 <select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></label>
+    <label>答题方式 <select id="mode"><option value="choice">选一选</option><option value="input">写一写</option></select></label>
+    <button id="start">开始 ▶</button>
+    <h3>最近成绩</h3>
+    <table id="history"></table>
+  </section>
+
+  <section id="play" class="hidden">
+    <div id="progress"></div>
+    <div id="picture"></div>
+    <div id="formula"></div>
+    <div id="choices"></div>
+    <form id="inputForm" class="hidden"><input id="answer" type="number" inputmode="numeric" min="0" max="99"> <button>好了</button></form>
+    <div id="feedback"></div>
+  </section>
+
+  <section id="result" class="hidden">
+    <h2 id="stars" style="font-size:56px"></h2>
+    <h2 id="scoreText"></h2>
+    <p id="saveMsg"></p>
+    <button id="again">再玩一次</button>
+  </section>
+</main>
+
+<script type="module">
+import { LEVELS, makeQuestion, makeChoices } from './game.js';
+
+const $ = (id) => document.getElementById(id);
+const show = (id) => ['setup', 'play', 'result'].forEach((s) => $(s).classList.toggle('hidden', s !== id));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+$('level').innerHTML = LEVELS.map((l, i) => `<option value="${i}">${l.name}</option>`).join('');
+try {
+  const saved = JSON.parse(localStorage.getItem('settings') || '{}');
+  for (const k of ['name', 'level', 'count', 'mode']) if (saved[k] != null) $(k).value = saved[k];
+} catch {}
+
+let game;
+
+function render(q) {
+  const items = (n, goneFrom = n) =>
+    `<span class="group">${Array.from({ length: n }, (_, i) => `<span class="${i >= goneFrom ? 'gone' : ''}">${q.item}</span>`).join('')}</span>`;
+  // Subtraction: show a items with the last b crossed out.
+  $('picture').innerHTML = q.op === '+'
+    ? `${items(q.a)}<span class="sign">+</span>${items(q.b)}`
+    : items(q.a, q.a - q.b);
+  $('formula').textContent = `${q.a} ${q.op} ${q.b} = ?`;
+  $('feedback').textContent = '';
+  $('progress').textContent = `第 ${game.i + 1} / ${game.count} 题   ⭐ ${game.right}`;
+  const max = LEVELS[game.level].max;
+  $('choices').innerHTML = game.mode === 'choice'
+    ? makeChoices(q.answer, max).map((c) => `<button data-v="${c}">${c}</button>`).join('')
+    : '';
+  $('inputForm').classList.toggle('hidden', game.mode !== 'input');
+  $('answer').value = '';
+  if (game.mode === 'input') $('answer').focus();
+  game.locked = false;
+}
+
+function answer(v) {
+  if (game.locked || Number.isNaN(v)) return;
+  const q = game.q;
+  if (v !== q.answer) {
+    // Wrong: no answer shown, let the kid retry; only a first-try answer scores.
+    q.missed = true;
+    $('feedback').innerHTML = '<span class="bad">🤔 再想想哦</span>';
+    document.querySelector(`#choices button[data-v="${v}"]`)?.setAttribute('disabled', '');
+    $('answer').value = '';
+    return;
+  }
+  game.locked = true;
+  if (!q.missed) game.right++;
+  $('feedback').innerHTML = '<span class="ok">✅ 太棒了！</span>';
+  $('formula').textContent = `${q.a} ${q.op} ${q.b} = ${q.answer}`;
+  setTimeout(next, 1200);
+}
+
+function next() {
+  game.i++;
+  if (game.i >= game.count) return finish();
+  game.q = makeQuestion(game.level);
+  render(game.q);
+}
+
+async function finish() {
+  const score = Math.round((game.right / game.count) * 100);
+  $('stars').textContent = score >= 90 ? '⭐⭐⭐' : score >= 60 ? '⭐⭐' : '⭐';
+  $('scoreText').textContent = `答对 ${game.right} / ${game.count} 题，得分 ${score}`;
+  $('saveMsg').textContent = '保存中…';
+  show('result');
+  try {
+    const r = await fetch('/api/scores', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: game.name, level: game.level, correct: game.right, total: game.count }),
+    });
+    $('saveMsg').textContent = r.ok ? '成绩已保存 ✔' : '成绩保存失败';
+  } catch {
+    $('saveMsg').textContent = '成绩保存失败（网络问题）';
+  }
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/scores?name=' + encodeURIComponent($('name').value.trim()));
+    const rows = await r.json();
+    $('history').innerHTML = rows.length
+      ? '<tr><th>时间</th><th>难度</th><th>答对</th><th>得分</th></tr>' + rows.map((s) =>
+          `<tr><td>${esc(new Date(s.created_at + 'Z').toLocaleString())}</td><td>${esc(LEVELS[s.level]?.name ?? s.level)}</td><td>${s.correct}/${s.total}</td><td>${Math.round((s.correct / s.total) * 100)}</td></tr>`).join('')
+      : '<tr><td>还没有成绩</td></tr>';
+  } catch {
+    $('history').innerHTML = '<tr><td>成绩加载失败</td></tr>';
+  }
+}
+
+$('choices').addEventListener('click', (e) => { if (e.target.dataset.v) answer(Number(e.target.dataset.v)); });
+$('inputForm').addEventListener('submit', (e) => { e.preventDefault(); if ($('answer').value !== '') answer(Number($('answer').value)); });
+$('start').addEventListener('click', () => {
+  const s = { name: $('name').value.trim() || '宝贝', level: Number($('level').value), count: Number($('count').value), mode: $('mode').value };
+  try { localStorage.setItem('settings', JSON.stringify(s)); } catch {}
+  game = { ...s, i: 0, right: 0, q: makeQuestion(s.level) };
+  show('play');
+  render(game.q);
+});
+$('again').addEventListener('click', () => { show('setup'); loadHistory(); });
+$('name').addEventListener('change', loadHistory);
+loadHistory();
+</script>
+</body>
+</html>

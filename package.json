@@ -1,0 +1,11 @@
+{
+  "name": "number-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "db:local": "wrangler d1 execute number-game --local --file schema.sql",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
+}
