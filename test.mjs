@@ -1,5 +1,11 @@
 import assert from 'node:assert';
-import { LEVELS, makeQuestion, makeChoices } from './public/game.js';
+import { LEVELS, makeQuestion, makeChoices, questionText } from './public/game.js';
+
+assert.equal(questionText({ a: 3, b: 2, op: '+', item: { u: '个', n: '苹果' } }), '3个苹果，再加2个苹果，一共有几个苹果？');
+assert.equal(questionText({ a: 5, b: 2, op: '-', item: { u: '辆', n: '小汽车' } }), '5辆小汽车，拿走2辆，还剩几辆？');
+const apple = { en: ['apple', 'apples'] };
+assert.equal(questionText({ a: 1, b: 2, op: '+', item: apple }, 'en'), '1 apple plus 2 apples. How many apples in all?');
+assert.equal(questionText({ a: 5, b: 1, op: '-', item: apple }, 'en'), '5 apples, take away 1. How many are left?');
 
 for (let level = 0; level < LEVELS.length; level++) {
   const { max, ops } = LEVELS[level];

@@ -1,5 +1,31 @@
 // Pure game logic (no DOM) — also loaded by test.mjs.
-export const ITEMS = ['🍎', '🍌', '🍓', '🍊', '🍇', '🚗', '🚌', '🚲', '🐟', '🎈', '⭐', '🐥'];
+// e: emoji, u: measure word, n: Chinese name, en: [singular, plural] — used for the spoken question.
+export const ITEMS = [
+  { e: '🍎', u: '个', n: '苹果', en: ['apple', 'apples'] }, { e: '🍌', u: '根', n: '香蕉', en: ['banana', 'bananas'] },
+  { e: '🍓', u: '颗', n: '草莓', en: ['strawberry', 'strawberries'] }, { e: '🍊', u: '个', n: '橘子', en: ['orange', 'oranges'] },
+  { e: '🍇', u: '串', n: '葡萄', en: ['bunch of grapes', 'bunches of grapes'] }, { e: '🚗', u: '辆', n: '小汽车', en: ['car', 'cars'] },
+  { e: '🚌', u: '辆', n: '公交车', en: ['bus', 'buses'] }, { e: '🚲', u: '辆', n: '自行车', en: ['bike', 'bikes'] },
+  { e: '🐟', u: '条', n: '小鱼', en: ['fish', 'fish'] }, { e: '🎈', u: '个', n: '气球', en: ['balloon', 'balloons'] },
+  { e: '⭐', u: '颗', n: '星星', en: ['star', 'stars'] }, { e: '🐥', u: '只', n: '小鸡', en: ['chick', 'chicks'] },
+];
+
+// Spoken phrases per language; lang is a BCP-47 tag used by speechSynthesis.
+export const SPEECH = {
+  zh: { lang: 'zh-CN', right: '太棒了', wrong: '再想想哦' },
+  en: { lang: 'en-US', right: 'Great job!', wrong: 'Try again!' },
+};
+
+export function questionText({ a, b, op, item: { u, n, en } }, lang = 'zh') {
+  if (lang === 'en') {
+    const name = (k) => en[k === 1 ? 0 : 1];
+    return op === '+'
+      ? `${a} ${name(a)} plus ${b} ${name(b)}. How many ${en[1]} in all?`
+      : `${a} ${name(a)}, take away ${b}. How many are left?`;
+  }
+  return op === '+'
+    ? `${a}${u}${n}，再加${b}${u}${n}，一共有几${u}${n}？`
+    : `${a}${u}${n}，拿走${b}${u}，还剩几${u}？`;
+}
 
 // Each level: max number, allowed ops.
 export const LEVELS = [
