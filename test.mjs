@@ -32,3 +32,20 @@ for (let level = 0; level < LEVELS.length; level++) {
   }
 }
 console.log('ok');
+
+// Pipe puzzle
+import { N, E, S, W, rotate, flow, makeLevel } from './public/pipes.js';
+assert.equal(rotate(N | E), E | S);
+assert.equal(rotate(N | S, 3), E | W);
+const straightUp = [0, N | S, 0, 0, N | S, 0, 0, N | S, 0];
+assert.equal(flow(straightUp, 1, 1).won, true);
+assert.equal(flow(straightUp, 0, 1).won, false);
+assert.equal(flow([0, E | W, 0, 0, N | S, 0, 0, N | S, 0], 1, 1).won, false);
+for (let i = 0; i < 500; i++) {
+  const lv = makeLevel();
+  assert.equal(lv.pieces.length, 6);
+  const grid = Array(9).fill(0);
+  lv.pieces.filter(p => p.sol !== null).forEach(p => { grid[p.sol] = p.mask; });
+  assert.equal(flow(grid, lv.entry, lv.exit).won, true);
+}
+console.log('pipes ok');
