@@ -15,6 +15,7 @@
 - **答错不给答案**：提示"再想想哦"，可以重答；只有第一次就答对才计分
 - **评分**：每局 5/10/15/20 题，结束给 0–100 分和 1–3 颗星
 - **账号**：邮箱密码注册登录，成绩按账号保存；一个账号下可用不同名字区分多个孩子
+- **接水管小游戏**（`/pipes.html`）：把 6 个水管方块拖进 3×3 网格，点一下顺时针转 90°，每块只能用一次；接通 🐰 到 🍄 就过关。关卡随机生成且保证有解
 
 ## 技术结构
 
@@ -24,6 +25,8 @@
 |---|---|
 | `public/index.html` | 页面与交互 |
 | `public/game.js` | 出题、选项、读题文本、挑选设备语音（纯逻辑）；加难度在 `LEVELS` 里加一行 |
+| `public/pipes.html` | 接水管小游戏页面与拖拽交互 |
+| `public/pipes.js` | 接水管：水流判断、随机生成有解关卡（纯逻辑） |
 | `src/worker.js` | API：`/api/register` `/api/login` `/api/logout` `/api/me` `/api/scores` `/api/tts`（英文语音，需登录） |
 | `src/auth.js` | PBKDF2 密码哈希、会话 Cookie |
 | `schema.sql` | D1 表结构：`users` `sessions` `scores` |
@@ -37,7 +40,7 @@
 npm run db:local   # 初始化本地 D1 数据库（首次）
 npm run dev        # http://localhost:8787
 npm run dev:lan    # 同一 Wi-Fi 下的平板访问 http://<电脑IP>:8787
-npm test           # 出题逻辑自测
+npm test           # 出题逻辑和接水管自测
 ```
 
 ## 部署
@@ -49,6 +52,7 @@ npm run deploy
 
 ## 已知限制
 
+- 接水管游戏还没有从主页进入的入口，需直接打开 `/pipes.html`
 - 没有找回/修改密码功能
 - "写一写"模式答不对会一直停在当前题
 - 中文读题音质取决于设备自带的语音；iPad 需关闭静音
